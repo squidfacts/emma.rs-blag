@@ -2,7 +2,7 @@
 staticPath: kalmarctf2025
 Title: KalmarCTF 2025
 Description: How to escape a python jail with only 14 characters
-Date: 2024-09-16
+Date: 2025-03-10
 ---
 
 ## RWX - Bronze

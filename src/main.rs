@@ -1,15 +1,25 @@
+use chrono::Datelike;
 use fxhash::hash32;
 use std::fs;
 use std::fs::read_to_string;
 use std::fs::File;
 use std::io::prelude::*;
+use std::process::exit;
 use std::process::Command;
+use std::process::Output;
 use std::str;
 use dotenvy;
 use std::env;
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::path::Path;
 use std::io;
+use chrono::NaiveDate;
+
+struct Link {
+    title: String,
+    date: String,
+    path: String,
+}
 
 fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> {
     fs::create_dir_all(&dst)?;
@@ -31,7 +41,7 @@ fn process_blog(
     obsidan_img_folder: &String,
     filename: &str,
     _obsidan_dir: &String,
-) {
+) -> Link {
     fs::create_dir_all("").unwrap();
 
     let mut parsed_path = String::new();
@@ -44,7 +54,6 @@ fn process_blog(
     let mut write = false;
     for line in read_to_string(filename).unwrap().lines() {
         let s = line.to_string();
-        // println!("{}",s);
 
         if s.contains("staticPath:") {
             if let Some(path_part) = s.splitn(2, ':').nth(1) {
@@ -147,6 +156,12 @@ fn process_blog(
             }
         }
     }
+
+    Link {
+        title: title.unwrap(),
+        date: date.unwrap(),
+        path: parsed_path,
+    }
 }
 
 fn write_to_file(mut file: &File, str: String) {
@@ -177,32 +192,52 @@ fn write_header(
     file.write(title.as_bytes()).unwrap();
 }
 
+fn handle_out(out: Output) {
+    println!("{}",str::from_utf8(&out.stdout).unwrap());
+    if out.stderr.len() != 0 {
+        println!("len {}",out.stderr.len());
+        println!("stderr: {}",str::from_utf8(&out.stderr).unwrap());
+       // exit(69);
+    }
+}
 fn publish_blag(bucket_name:String, distribution_id:String) {
+    let bucket_name = bucket_name.trim();
     let start = SystemTime::now();
     let since_the_epoch = start
         .duration_since(UNIX_EPOCH)
         .expect("Time went backwards").as_secs().to_string();
     let invalidation_cmd = format!(r#"Paths={{Quantity=1,Items=["/*"]}},CallerReference="{}""#,since_the_epoch);
-    Command::new("npm")
+    
+    let out = Command::new("npm")
         .current_dir("emma.rs")
         .arg("run")
         .arg("build")
         .output()
         .expect("npm build failed");
+    handle_out(out);
     println!("Ran npm build");
-    Command::new("aws")
+    let out = Command::new("aws")
+        .arg("s3")
         .arg("rm")
         .arg("s3://".to_owned()+ &bucket_name)
         .arg("--recursive")
         .output()
         .expect("Couldn't clean bucket");
+    handle_out(out);
+
+   
+    
     println!("Cleaned bucket");
-    Command::new("aws")
+    let out = Command::new("aws")
+        .arg("s3")
         .arg("sync")
         .arg("emma.rs/out/")
         .arg("s3://".to_owned() + &bucket_name)
         .output()
         .expect("Couldn't upload to bucket");
+    handle_out(out);
+    
+
     println!("Synced to bucket");
 
     let invalidation_id =     Command::new("aws")
@@ -217,7 +252,8 @@ fn publish_blag(bucket_name:String, distribution_id:String) {
     .arg("--output")
     .arg("text")
     .output()
-    .expect("Couldn't create invalidation");    
+    .expect("Couldn't create invalidation");   
+    handle_out(invalidation_id.clone());
 
     let invalidation_id =str::from_utf8(&invalidation_id.stdout).unwrap().trim();
 
@@ -233,6 +269,11 @@ fn publish_blag(bucket_name:String, distribution_id:String) {
     .arg(invalidation_id)
     .output()
     .expect("Couldn't wait on invalidation");
+
+    if wait_out.stdout.len() != 0 {
+        println!("{}",str::from_utf8(&wait_out.stdout).unwrap());
+        exit(69);
+    }
 
     println!("Done :)");
    
@@ -266,6 +307,37 @@ fn cleanup_pre_build() {
 
     fs::create_dir("emma.rs/public").expect("Couldn't create public dir");
     fs::create_dir("emma.rs/app").expect("Couldn't create app dir");
+    println!("Done prebuild clean up");
+}
+
+fn cool_date(date: String) -> String {
+    let date = NaiveDate::parse_from_str(&date,"%Y-%m-%d").unwrap();
+    let month = &date.format("%B").to_string()[0..3];
+    let year = date.year().to_string();
+
+    format!("{} {}",month,year)
+
+
+
+}
+fn write_main_page(mut links: Vec<Link>) {
+    //order by date
+    links.sort_by(|a,b| b.date.partial_cmp(&a.date).unwrap());
+    let mut w = Vec::new();
+    writeln!(&mut w,"# Hi! 🦑").unwrap();
+    writeln!(&mut w).unwrap();
+    writeln!(&mut w).unwrap();
+    writeln!(&mut w,"I’m Emma. My interests are malware reversing, penetration testing, and browser fuzzing.").unwrap();
+    writeln!(&mut w).unwrap();
+    writeln!(&mut w,"<p class=\"highlight\">Loading...</p>").unwrap();
+    writeln!(&mut w,"<script src=\"static/wasm.js\"></script>").unwrap();
+
+   
+    for link in &links {
+        let date = cool_date(link.date.clone());
+        writeln!(&mut w, "- [{}]({}) ({})",link.title,link.path, date).unwrap();
+    }
+    fs::write("emma.rs/app/page.mdx", w).expect("Unable to write main page");
 }
 
 fn main() {
@@ -276,21 +348,25 @@ fn main() {
     copy_includes("public-includes", "public");
     let paths = fs::read_dir("blag-src/Publish").unwrap();
 
+    let mut links = vec![];
     for path in paths {
         let path = path.unwrap().path();
         let display = path.display();
 
-        process_blog(
+        let link = process_blog(
             &("emma.rs/".to_string()),
             &("blag-src/Imgs/").to_string(),
             &display.to_string(),
             &("blag-src/Publish".to_string()),
         );
+        links.push(link);
     }
+
 
     let bucket_name = env::var("BUCKET_NAME").expect("Couldn't load bucket name");
     let distrbition_id = env::var("DISTRIBUTION_ID").expect("couldn't load distribution id");
 
 
+    write_main_page(links);
     publish_blag(bucket_name,distrbition_id);
 }
