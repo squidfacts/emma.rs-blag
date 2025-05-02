@@ -1,6 +1,6 @@
-- [ ] Blag open sourcing
+- [x] Blag open sourcing
 
 ## Flare on
-- [ ] cred checker
-- [ ] known
+- [x] cred checker
+- [x] known
 - [ ] antioch

@@ -165,7 +165,7 @@ fn process_blog(
 }
 
 fn write_to_file(mut file: &File, str: String) {
-    file.write((str + "\n").as_bytes()).unwrap();
+    file.write((str + "  \n").as_bytes()).unwrap();
 }
 
 fn parse_text(s: &str) -> &str {
