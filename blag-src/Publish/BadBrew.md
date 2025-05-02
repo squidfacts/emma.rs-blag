@@ -1,7 +1,7 @@
 ---
 staticPath: badbrew
 Title: Bad Brew
-Description: Using a format string vulnerability to leak stack data
+Description: Reverse engineering a macOS info-stealer sample.
 Date: 2024-11-28
 tags:
   - Malware

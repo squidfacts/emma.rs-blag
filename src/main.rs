@@ -1,4 +1,5 @@
 use chrono::Datelike;
+use chrono::NaiveTime;
 use fxhash::hash32;
 use std::fs;
 use std::fs::read_to_string;
@@ -14,11 +15,16 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use std::path::Path;
 use std::io;
 use chrono::NaiveDate;
+use chrono::Local;
+use chrono_tz::US::Mountain;
+use chrono::TimeZone;
 
+#[derive(Debug)]
 struct Link {
     title: String,
     date: String,
     path: String,
+    description: String,
 }
 
 fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> {
@@ -161,12 +167,14 @@ fn process_blog(
         title: title.unwrap(),
         date: date.unwrap(),
         path: parsed_path,
+        description: description.unwrap(),
     }
 }
 
 fn write_to_file(mut file: &File, str: String) {
     file.write((str + "  \n").as_bytes()).unwrap();
 }
+
 
 fn parse_text(s: &str) -> &str {
     let mut s = &s[1..];
@@ -320,7 +328,57 @@ fn cool_date(date: String) -> String {
 
 
 }
-fn write_main_page(mut links: Vec<Link>) {
+fn convert_obs_date_to_rss_date(date: &String) -> String {
+    let date = NaiveDate::parse_from_str(date,"%Y-%m-%d").unwrap();
+    let noon = NaiveTime::from_hms_opt(12,0,0).unwrap();
+    let datetime = date.and_time(noon);
+    let mountain_time = Mountain.from_local_datetime(&datetime).unwrap();
+
+    mountain_time.format("%a, %-d %b %Y %H:%M:%S %Z").to_string()
+}
+
+fn write_article( w:&mut Vec<u8>,link: &Link) {
+    writeln!( w, "\t<item>").unwrap();
+    writeln!( w,"\t\t<title>{}</title>",link.title).unwrap();
+    writeln!( w,"\t\t<description>{}</description>",link.description).unwrap();
+    let url = format!("https://emma.rs/{}",link.path);
+    writeln!( w,"\t\t<link>{}</link>",url).unwrap();
+    let guid = hash32(&url);
+    writeln!( w,"\t\t<guid>{}</guid>",guid).unwrap();
+    let date = convert_obs_date_to_rss_date(&link.date);
+    writeln!( w,"\t\t<pubDate>{}</pubDate>",date).unwrap();
+    writeln!( w, "\t</item>").unwrap();
+}
+fn gen_rss(links:& Vec<Link>) {
+    let now = Local::now();
+    let year = now.format("%Y").to_string();
+
+    let build_date = now.format("%a, %-d %b %Y %H:%M:%S %z").to_string();
+    let mut w = Vec::new();
+    writeln!(&mut w,"<?xml version=\"1.0\" encoding=\"UTF-8\" ?>").unwrap();
+    writeln!(&mut w,"<rss version=\"2.0\" xmlns:atom=\"http://www.w3.org/2005/Atom\">").unwrap();
+    writeln!(&mut w,"<channel>").unwrap();
+    writeln!(&mut w,"<atom:link href=\"https://emma.rs/rss.xml\" rel=\"self\" type=\"application/rss+xml\" />").unwrap();
+    writeln!(&mut w,"\t<title>emma.rs feed</title>").unwrap();
+    writeln!(&mut w,"\t<description>This is a feed for emma.rs. Focusing on malware reverse engineering, vuln research and browser fuzzing</description>").unwrap();
+    writeln!(&mut w,"\t<link>https://emma.rs</link>").unwrap();
+    writeln!(&mut w,"\t<copyright>{} emma.rs All rights reserved</copyright>",year).unwrap();
+    writeln!(&mut w,"\t<lastBuildDate>{}</lastBuildDate>",build_date).unwrap();
+    writeln!(&mut w,"\t<pubDate>{}</pubDate>",build_date).unwrap();
+    writeln!(&mut w,"\t<ttl>1800</ttl>").unwrap();
+    
+    for link in links {
+        write_article(&mut w, link);
+    }
+    writeln!(&mut w).unwrap();
+    writeln!(&mut w, "</channel>").unwrap();
+    writeln!(&mut w,"</rss>").unwrap();
+
+    fs::write("emma.rs/public/rss.xml", w).expect("Unable to write xml file");
+
+
+}
+fn write_main_page(links:&mut Vec<Link>) {
     //order by date
     links.sort_by(|a,b| b.date.partial_cmp(&a.date).unwrap());
     let mut w = Vec::new();
@@ -333,10 +391,13 @@ fn write_main_page(mut links: Vec<Link>) {
     writeln!(&mut w,"<script src=\"static/wasm.js\"></script>").unwrap();
 
    
-    for link in &links {
+    for link in links {
+        //println!("{:#?}",link);
         let date = cool_date(link.date.clone());
-        writeln!(&mut w, "- [{}]({}) ({})",link.title,link.path, date).unwrap();
+        writeln!(&mut w, "- [{}]({}) ({})  ",link.title,link.path, date).unwrap();
     }
+    writeln!(&mut w).unwrap();
+    writeln!(&mut w,"Subscribe to my [RSS Feed](https://emma.rs/rss.xml)").unwrap();
     fs::write("emma.rs/app/page.mdx", w).expect("Unable to write main page");
 }
 
@@ -364,9 +425,12 @@ fn main() {
 
 
     let bucket_name = env::var("BUCKET_NAME").expect("Couldn't load bucket name");
-    let distrbition_id = env::var("DISTRIBUTION_ID").expect("couldn't load distribution id");
+    let distribution_id = env::var("DISTRIBUTION_ID").expect("couldn't load distribution id");
 
 
-    write_main_page(links);
-    publish_blag(bucket_name,distrbition_id);
+    write_main_page(&mut links);
+    println!("Wrote main page");
+    gen_rss(&links);
+    println!("Generated rss feed");
+    publish_blag(bucket_name,distribution_id);
 }

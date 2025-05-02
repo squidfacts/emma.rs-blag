@@ -1,7 +1,8 @@
 ---
 staticPath: lumma
-Title: "Github Scanner Malware Analysis"
+Title: Github Scanner Malware Analysis
 Date: 2024-12-13
+Description: Using dynamic analysis to analyze a Lumma sample.
 ---
 
 # Github Scanner Malware

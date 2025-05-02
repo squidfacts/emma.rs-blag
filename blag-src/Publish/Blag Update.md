@@ -1,7 +1,7 @@
 ---
 staticPath: blagupdate
 Title: Blag Update
-Description: 
+Description: An update on open sourcing my blag
 Date: 2025-05-02
 tags:
   - blag

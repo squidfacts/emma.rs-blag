@@ -1,7 +1,7 @@
 ---
 staticPath: kalmarctf2025
 Title: KalmarCTF 2025
-Description: How to escape a python jail with only 14 characters
+Description: Writeup for KalmarCTF 2025, involving exploting a read, write, execute primitive with a limitation on command length.
 Date: 2025-03-10
 ---
 

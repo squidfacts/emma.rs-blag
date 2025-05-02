@@ -1,7 +1,7 @@
 ---
 staticPath: flare8known
 Title: "Flare8: Known"
-Description: A Look into Fuzzilli Internals
+Description: My write up for the Flare On 8 challenge called known
 Date: 2025-04-26
 tags:
   - flare

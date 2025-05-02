@@ -1,7 +1,7 @@
 ---
 staticPath: flare8credchecker
 Title: "Flare8: Credchecker"
-Description: A Look into Fuzzilli Internals
+Description: My write up for the Flare On 8 challenge called Credchecker
 Date: 2025-04-26
 tags:
   - flare
