@@ -1,0 +1,9 @@
+/target
+/emma.rs/node_modules
+emma.rs/.next/
+.DS_Store
+.env
+blag-src/.obsidian
+emma.rs/out
+emma.rs/app
+emma.rs/public
