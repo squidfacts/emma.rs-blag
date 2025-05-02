@@ -429,12 +429,13 @@ fn write_main_page(links:&mut Vec<Article>) {
     writeln!(&mut w).unwrap();
     writeln!(&mut w,"<p class=\"highlight\">Loading...</p>").unwrap();
     writeln!(&mut w,"<script src=\"static/wasm.js\"></script>").unwrap();
-    writeln!(&mut w, "[tags](/tags)").unwrap();   
     for link in links {
         //println!("{:#?}",link);
         let date = cool_date(link.date.clone());
         writeln!(&mut w, "- [{}]({}) ({})  ",link.title,link.path, date).unwrap();
-    }
+    }    
+    writeln!(&mut w, "[Explore Tags](/tags)").unwrap();   
+
     writeln!(&mut w).unwrap();
     writeln!(&mut w,"Subscribe to my [RSS Feed](https://emma.rs/rss.xml)").unwrap();
     fs::write("emma.rs/app/page.mdx", w).expect("Unable to write main page");
