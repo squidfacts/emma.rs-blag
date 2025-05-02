@@ -8,6 +8,23 @@ use std::str;
 use dotenvy;
 use std::env;
 use std::time::{SystemTime, UNIX_EPOCH};
+use std::path::Path;
+use std::io;
+
+fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> {
+    fs::create_dir_all(&dst)?;
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let ty = entry.file_type()?;
+        if ty.is_dir() {
+            copy_dir_all(entry.path(), dst.as_ref().join(entry.file_name()))?;
+        } else {
+            fs::copy(entry.path(), dst.as_ref().join(entry.file_name()))?;
+        }
+    }
+    Ok(())
+}
+
 
 fn process_blog(
     hugo_base_dir: &String,
@@ -221,31 +238,42 @@ fn publish_blag(bucket_name:String, distribution_id:String) {
    
 }
 
-fn copy_includes() {
 
-    let paths = fs::read_dir("emma.rs/app-includes").unwrap();
+
+fn copy_includes(src_dir: &str,dest_dir:&str) {
+
+    let src_path = format!("emma.rs/{}",src_dir);
+    let paths = fs::read_dir(src_path).unwrap();
 
     for path in paths {
         let path = path.unwrap().path();
         let path = path.display().to_string();
-        let dest = path.replace("app-includes", "app");
-        println!("Copying {path} to {dest}");
-        fs::copy(path, dest).unwrap();
-    }
-
-    let paths = fs::read_dir("emma.rs/public-includes").unwrap();
-    for path in paths {
-        let path = path.unwrap().path();
-        let path = path.display().to_string();
-        let dest = path.replace("public-includes", "public");
-        println!("Copying {path} to {dest}");
-        fs::copy(path, dest).unwrap();
+        let dest = path.replace(&src_dir, &dest_dir);
+        let attr = fs::metadata(path.clone()).expect("couldn't get metadata");
+        if attr.is_file() {
+            println!("Copying {path} to {dest}");
+            fs::copy(path, dest).unwrap();
+        } else if attr.is_dir() {
+            println!("Copying dir {path} to {dest}");
+            copy_dir_all(path, dest).expect("coudn't copy dir");
+        }
     }
 }
+
+fn cleanup_pre_build() {
+    fs::remove_dir_all("emma.rs/public").expect("couldn't remove public dir");
+    fs::remove_dir_all("emma.rs/app").expect("Couldn't remove app dir");
+
+    fs::create_dir("emma.rs/public").expect("Couldn't create public dir");
+    fs::create_dir("emma.rs/app").expect("Couldn't create app dir");
+}
+
 fn main() {
     dotenvy::dotenv().unwrap();
 
-
+    cleanup_pre_build();
+    copy_includes("app-includes","app");
+    copy_includes("public-includes", "public");
     let paths = fs::read_dir("blag-src/Publish").unwrap();
 
     for path in paths {
@@ -263,6 +291,6 @@ fn main() {
     let bucket_name = env::var("BUCKET_NAME").expect("Couldn't load bucket name");
     let distrbition_id = env::var("DISTRIBUTION_ID").expect("couldn't load distribution id");
 
-    copy_includes();
+
     publish_blag(bucket_name,distrbition_id);
 }
