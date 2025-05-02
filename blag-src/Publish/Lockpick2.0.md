@@ -4,9 +4,8 @@ Title: "Hack the Box: LockPick 2.0"
 Description: Analysis of a UPX protected ransomware sample
 Date: 2024-11-27
 tags:
-  - HTB
-  - CTF
   - Malware
+  - HackTheBox
 ---
 This is an analysis of the lockpick 2.0 sherlock from Hack the Box. The provided binary is called update. Running file on the binary returns:
 

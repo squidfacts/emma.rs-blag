@@ -3,7 +3,9 @@ staticPath: racecar
 Title: "Hack the Box: Racecar"
 Description: Using a format string vulnerability to leak stack data
 Date: 2024-11-28
-tags: []
+tags:
+  - CTF
+  - HackTheBox
 ---
 Racecar is a pwn challenge from Hack the Box. Below is where the executable opens the flag file.
 

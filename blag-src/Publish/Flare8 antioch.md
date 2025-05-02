@@ -4,7 +4,8 @@ Title: "Flare8: Antioch"
 Description: My write up for the Flare On 8 challenge called Antioch
 Date: 2025-04-27
 tags:
-  - flare
+  - CTF
+  - Flare
 ---
 Attempt time: 340 mins  
 Flag: N/a

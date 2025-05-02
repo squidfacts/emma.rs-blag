@@ -4,7 +4,8 @@ Title: "Flare8: Credchecker"
 Description: My write up for the Flare On 8 challenge called Credchecker
 Date: 2025-04-26
 tags:
-  - flare
+  - CTF
+  - Flare
 ---
 Solve time: 25 mins
 Flag: enter_the_funhouse@flare-on.com

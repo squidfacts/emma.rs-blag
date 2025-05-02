@@ -1,6 +1,7 @@
 use chrono::Datelike;
 use chrono::NaiveTime;
 use fxhash::hash32;
+use std::collections::BTreeMap;
 use std::fs;
 use std::fs::read_to_string;
 use std::fs::File;
@@ -19,12 +20,14 @@ use chrono::Local;
 use chrono_tz::US::Mountain;
 use chrono::TimeZone;
 
-#[derive(Debug)]
-struct Link {
+
+#[derive(Debug,Clone)]
+struct Article {
     title: String,
     date: String,
     path: String,
     description: String,
+    tags: Vec<String>
 }
 
 fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> {
@@ -47,7 +50,7 @@ fn process_blog(
     obsidan_img_folder: &String,
     filename: &str,
     _obsidan_dir: &String,
-) -> Link {
+) -> Article {
     fs::create_dir_all("").unwrap();
 
     let mut parsed_path = String::new();
@@ -105,11 +108,14 @@ fn process_blog(
             }
         }
         if s.contains(" - ") {
-            if let Some(parsed_tag) = s.splitn(2, "-").nth(1) {
-                let parsed_tag = &parsed_tag[1..];
-                tags.push(parsed_tag.to_string());
+            if !write {
+                if let Some(parsed_tag) = s.splitn(2, "-").nth(1) {
+                    let parsed_tag = &parsed_tag[1..];
+                    tags.push(parsed_tag.to_string());
+                }
             }
         }
+
         if s.contains("---") {
             if !file.is_none() {
                 write = true;
@@ -163,11 +169,12 @@ fn process_blog(
         }
     }
 
-    Link {
+    Article {
         title: title.unwrap(),
         date: date.unwrap(),
         path: parsed_path,
         description: description.unwrap(),
+        tags
     }
 }
 
@@ -337,7 +344,7 @@ fn convert_obs_date_to_rss_date(date: &String) -> String {
     mountain_time.format("%a, %-d %b %Y %H:%M:%S %Z").to_string()
 }
 
-fn write_article( w:&mut Vec<u8>,link: &Link) {
+fn write_article( w:&mut Vec<u8>,link: &Article) {
     writeln!( w, "\t<item>").unwrap();
     writeln!( w,"\t\t<title>{}</title>",link.title).unwrap();
     writeln!( w,"\t\t<description>{}</description>",link.description).unwrap();
@@ -349,7 +356,7 @@ fn write_article( w:&mut Vec<u8>,link: &Link) {
     writeln!( w,"\t\t<pubDate>{}</pubDate>",date).unwrap();
     writeln!( w, "\t</item>").unwrap();
 }
-fn gen_rss(links:& Vec<Link>) {
+fn gen_rss(links:& Vec<Article>) {
     let now = Local::now();
     let year = now.format("%Y").to_string();
 
@@ -378,7 +385,40 @@ fn gen_rss(links:& Vec<Link>) {
 
 
 }
-fn write_main_page(links:&mut Vec<Link>) {
+
+fn gen_tags(links:&mut Vec<Article>) {
+
+    let mut tags = BTreeMap::new();
+
+
+    for link in links {
+        for tag in link.tags.clone().into_iter() {
+            if !tags.contains_key(&tag) {
+                tags.insert(tag,vec![link.clone()] );
+            } else {
+                let list = tags.get_mut(&tag).unwrap();
+                list.push(link.clone());
+            }
+            
+        }
+    }
+    let mut w = Vec::new();
+    for (tag_name,articles) in tags.iter() {
+        writeln!(&mut w,"# {}",tag_name).unwrap();
+        for article in articles {
+            writeln!(&mut w,"- [{}]({})",article.title,article.path).unwrap();
+        }
+
+        writeln!(&mut w).unwrap();
+        writeln!(&mut w).unwrap();
+    }
+
+    fs::create_dir_all("emma.rs/app/tags/").expect("coudln't create tags dir");
+    fs::write("emma.rs/app/tags/page.mdx", w).expect("Unable to write tags file");
+
+}
+
+fn write_main_page(links:&mut Vec<Article>) {
     //order by date
     links.sort_by(|a,b| b.date.partial_cmp(&a.date).unwrap());
     let mut w = Vec::new();
@@ -389,8 +429,7 @@ fn write_main_page(links:&mut Vec<Link>) {
     writeln!(&mut w).unwrap();
     writeln!(&mut w,"<p class=\"highlight\">Loading...</p>").unwrap();
     writeln!(&mut w,"<script src=\"static/wasm.js\"></script>").unwrap();
-
-   
+    writeln!(&mut w, "[tags](/tags)").unwrap();   
     for link in links {
         //println!("{:#?}",link);
         let date = cool_date(link.date.clone());
@@ -432,5 +471,7 @@ fn main() {
     println!("Wrote main page");
     gen_rss(&links);
     println!("Generated rss feed");
+    gen_tags(&mut links);
+    println!("Generated tags page");
     publish_blag(bucket_name,distribution_id);
 }

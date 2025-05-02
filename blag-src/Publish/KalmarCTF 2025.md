@@ -3,6 +3,8 @@ staticPath: kalmarctf2025
 Title: KalmarCTF 2025
 Description: Writeup for KalmarCTF 2025, involving exploting a read, write, execute primitive with a limitation on command length.
 Date: 2025-03-10
+tags:
+  - CTF
 ---
 
 ## RWX - Bronze
