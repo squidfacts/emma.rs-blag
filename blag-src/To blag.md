@@ -3,4 +3,4 @@
 ## Flare on
 - [x] cred checker
 - [x] known
-- [ ] antioch
+- [x] antioch
