@@ -4,3 +4,4 @@
 - [x] cred checker
 - [x] known
 - [x] antioch
+- [ ] Flare5 Minesweeper
