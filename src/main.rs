@@ -425,7 +425,7 @@ fn write_main_page(links:&mut Vec<Article>) {
     writeln!(&mut w,"# Hi! 🦑").unwrap();
     writeln!(&mut w).unwrap();
     writeln!(&mut w).unwrap();
-    writeln!(&mut w,"I’m Emma. My interests are malware reversing, penetration testing, and browser fuzzing.").unwrap();
+    writeln!(&mut w,"I’m Emma (They/Them). My interests are malware reversing, penetration testing, and browser fuzzing.").unwrap();
     writeln!(&mut w).unwrap();
     writeln!(&mut w,"<p class=\"highlight\">Loading...</p>").unwrap();
     writeln!(&mut w,"<script src=\"static/wasm.js\"></script>").unwrap();

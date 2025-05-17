@@ -4,4 +4,10 @@
 - [x] cred checker
 - [x] known
 - [x] antioch
-- [ ] Flare5 Minesweeper
+- [x] Flare5 Minesweeper
+
+
+## HTB
+- [x] IRCWare
+- [ ] Link Hands
+
