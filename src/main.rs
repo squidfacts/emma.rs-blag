@@ -317,8 +317,8 @@ fn copy_includes(src_dir: &str,dest_dir:&str) {
 }
 
 fn cleanup_pre_build() {
-    fs::remove_dir_all("emma.rs/public").expect("couldn't remove public dir");
-    fs::remove_dir_all("emma.rs/app").expect("Couldn't remove app dir");
+    let _ = fs::remove_dir_all("emma.rs/public").is_ok();
+    let _ = fs::remove_dir_all("emma.rs/app").is_ok();
 
     fs::create_dir("emma.rs/public").expect("Couldn't create public dir");
     fs::create_dir("emma.rs/app").expect("Couldn't create app dir");
@@ -425,7 +425,7 @@ fn write_main_page(links:&mut Vec<Article>) {
     writeln!(&mut w,"# Hi! 🦑").unwrap();
     writeln!(&mut w).unwrap();
     writeln!(&mut w).unwrap();
-    writeln!(&mut w,"I’m Emma (They/Them). My interests are malware reversing, penetration testing, and browser fuzzing.").unwrap();
+    writeln!(&mut w,"I’m Emma. My interests are malware reversing, penetration testing, and browser fuzzing.").unwrap();
     writeln!(&mut w).unwrap();
     writeln!(&mut w,"<p class=\"highlight\">Loading...</p>").unwrap();
     writeln!(&mut w,"<script src=\"static/wasm.js\"></script>").unwrap();

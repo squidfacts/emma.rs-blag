@@ -3,6 +3,8 @@
 emma.rs/.next/
 .DS_Store
 .env
+package*
+node_modules/
 blag-src/.obsidian
 emma.rs/out
 emma.rs/app
